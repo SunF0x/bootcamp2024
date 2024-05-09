@@ -5,7 +5,7 @@
 
 <img src="https://github.com/SunF0x/bootcamp2024/assets/57665335/a4d83809-3582-470e-902f-74f599205bd9" width="400" />
 
-В папке test файл [Tests_balance](src/test/Tests_balance.java) отвечает за проверку вычисления баланса пользователей и проверку списания.
+В папке test файл [Tests_balance](bootcamp/src/test/Tests_balance.java) отвечает за проверку вычисления баланса пользователей и проверку списания.
 Для проверки был сгенерирован CDR
 
 <img src="https://github.com/SunF0x/bootcamp2024/assets/57665335/fa3d4e51-6d17-4b43-8bb9-35acfc031916" width="400" />
