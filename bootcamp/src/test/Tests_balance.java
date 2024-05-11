@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.text.SimpleDateFormat;
+import java.util.Base64;
 import java.util.Date;
 
 import static io.restassured.RestAssured.given;
@@ -14,6 +15,10 @@ public class Tests_balance {
     String base_url = "http://localhost:5050";
 
     String msisdn = "79876543212";
+
+    public static String encode(String str1, String str2) {
+        return new String(Base64.getEncoder().encode((str1 + ":" + str2).getBytes()));
+    }
 
     public static Date toData(long unixSeconds) {
         Date date = new java.util.Date(unixSeconds);
@@ -29,14 +34,12 @@ public class Tests_balance {
 
     @Test
     public void testGetBalance() {
+        String authorization = encode(msisdn, msisdn);
         Response response = given().when()
-                .get(base_url+"/clients/clients/"+msisdn+"/balance").then()
-                .extract().response();
-
+                .header("authorization", "Basic " + authorization)
+                .get(base_url+"/clients/"+msisdn+"/balance");
         Assertions.assertEquals(200, response.statusCode());
         System.out.println(response.jsonPath().getString("money"));
-
-
     }
 
     @Test
