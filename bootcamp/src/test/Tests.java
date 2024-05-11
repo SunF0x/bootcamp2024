@@ -1,18 +1,29 @@
 package test;
 
 import static io.restassured.RestAssured.*;
-import static io.restassured.matcher.RestAssuredMatchers.*;
 import static org.hamcrest.Matchers.*;
 
+import io.restassured.response.Response;
+import net.datafaker.Faker;
 import org.json.JSONException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.json.JSONObject;
 
 import java.util.Random;
 
+import java.util.Base64;
+
 
 public class Tests {
-    String base_url = "https://108909b1-ee03-45a1-b416-a9a60a2f0589.mock.pstmn.io";
+    String base_url = "http://localhost:5050";
+
+    static String msisdn = "79876543212";
+    Faker faker = new Faker();
+
+    public static String encode(String str1, String str2) {
+        return new String(Base64.getEncoder().encode((str1 + ":" + str2).getBytes()));
+    }
 
     public static String getRandomIntegerBetweenRange(int min, int max){
         Random rn = new Random();
@@ -21,86 +32,167 @@ public class Tests {
         return x;
     }
 
-    String msisdn = "8" + getRandomIntegerBetweenRange(10000, 99999) + getRandomIntegerBetweenRange(10000, 99999);
-
-
     @Test
-    public void testGetClientStatusCode()
+    public void testGetClients()
     {
-        get(base_url+"/clients").then().statusCode(200);
-    }
-
-    @Test
-    public void testGetClientField() {
-        get(base_url+"/clients").then().assertThat()
-            .body("$", hasKey("clients"));
+        String authorization = encode("admin", "admin");
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization).
+                get(base_url+"/clients");
+        Assertions.assertEquals(200, response.statusCode());
+        System.out.println(response.asPrettyString());
     }
 
     @Test
     public void testPostClientAdd() throws JSONException {
+        String authorization = encode("admin", "admin");
         JSONObject requestParams = new JSONObject();
-        requestParams.put("msisdn", msisdn);
+        String new_msisdn = "79" + getRandomIntegerBetweenRange(1000, 9999)
+                + getRandomIntegerBetweenRange(10000, 99999);
+        System.out.println(new_msisdn);
+        requestParams.put("msisdn", new_msisdn);
         requestParams.put("tariffId", "11");
+        requestParams.put("name", faker.name().firstName());
         requestParams.put("money", getRandomIntegerBetweenRange(1,1000));
 
-        given()
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
                 .body(requestParams.toString())
                 .contentType("application/json")
-                .when().post(base_url+"/clients").then()
-                .statusCode(200).assertThat()
-                .body("$", hasKey("msisdn"))
-                .body("$", hasKey("tariffId"))
-                .body("$", hasKey("money"));
+                .when().post(base_url+"/clients");
+        Assertions.assertEquals(200, response.statusCode());
+        System.out.println(response.asPrettyString());
     }
 
-//    @Test
-//    public void testPostClientAddFail() throws JSONException {
-//        JSONObject requestParams = new JSONObject();
-//        requestParams.put("msisdn", 9);
-//        requestParams.put("tariffId", 0);
-//        requestParams.put("money", 100);
-//
-//        given()
-//                .body(requestParams.toString())
-//                .contentType("application/json")
-//                .when().post(base_url+"/clients").then()
-//                .statusCode(400); //ожидается 400 из-за некорректных данных
-//    }
+    @Test
+    public void FailTestPostClientAdd1() throws JSONException {
+        String authorization = encode("admin", "admin");
+        JSONObject requestParams = new JSONObject();
+        String new_msisdn = "79" + getRandomIntegerBetweenRange(1000, 9999)
+                + getRandomIntegerBetweenRange(10000, 99999);
+        System.out.println(new_msisdn);
+        requestParams.put("msisdn", new_msisdn);
+        requestParams.put("tariffId", -100);
+        requestParams.put("name", 0);
+        requestParams.put("money", getRandomIntegerBetweenRange(-1000,0));
+
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
+                .body(requestParams.toString())
+                .contentType("application/json")
+                .when().post(base_url+"/clients");
+        Assertions.assertEquals(400, response.statusCode());
+        System.out.println(response.asPrettyString());
+    }
+
 
     @Test
     public void testGetBalance() {
-        get(base_url+"/clients/"+msisdn+"/balance").then()
-                .statusCode(200).assertThat()
-                .body("$", hasKey("msisdn")).body("$", hasKey("money")); //ожидается 400
+        String authorization = encode(msisdn, msisdn);
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
+                .get(base_url+"/clients/"+msisdn+"/balance");
+        Assertions.assertEquals(200, response.statusCode());
+        System.out.println(response.jsonPath().getString("money"));
     }
 
     @Test
     public void testPatchBalance() throws JSONException {
+        String authorization = encode(msisdn, msisdn);
         JSONObject requestParams = new JSONObject();
         requestParams.put("msisdn", msisdn);
         requestParams.put("money", getRandomIntegerBetweenRange(1,1000));
 
-        given()
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
                 .body(requestParams.toString())
                 .contentType("application/json")
-                .when().patch(base_url+"/clients/"+msisdn+"/balance").then()
-                .statusCode(200).assertThat()
-                .body("$", hasKey("msisdn")).body("$", hasKey("money"));
+                .when().patch(base_url+"/clients/"+msisdn+"/balance");
+
+        Assertions.assertEquals(200, response.statusCode());
+        System.out.println(response.asPrettyString());
+    }
+
+    @Test
+    public void FailTestPatchBalance1() throws JSONException {
+        String authorization = encode(msisdn, msisdn);
+        JSONObject requestParams = new JSONObject();
+        requestParams.put("msisdn", msisdn);
+        requestParams.put("money", getRandomIntegerBetweenRange(-1000,0));
+
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
+                .body(requestParams.toString())
+                .contentType("application/json")
+                .when().patch(base_url+"/clients/"+msisdn+"/balance");
+
+        Assertions.assertEquals(400, response.statusCode());
+        System.out.println(response.asPrettyString());
+    }
+
+    @Test
+    public void FailTestPatchBalance2() throws JSONException {
+        String authorization = encode(msisdn, msisdn);
+        JSONObject requestParams = new JSONObject();
+        requestParams.put("msisdn", 8888);
+        requestParams.put("money", getRandomIntegerBetweenRange(1000,2000));
+
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
+                .body(requestParams.toString())
+                .contentType("application/json")
+                .when().patch(base_url+"/clients/"+msisdn+"/balance");
+
+        Assertions.assertEquals(403, response.statusCode());
+        System.out.println(response.asPrettyString());
     }
 
     @Test
     public void testPatchTariffID() throws JSONException {
+        String authorization = encode("admin", "admin");
         JSONObject requestParams = new JSONObject();
         requestParams.put("msisdn", msisdn);
-        requestParams.put("tariffId", "12");
+        requestParams.put("tariffId", "11");
 
-        given()
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
                 .body(requestParams.toString())
                 .contentType("application/json")
-                .when().patch(base_url+"/clients/"+msisdn+"/tariffID").then()
-                .statusCode(200).assertThat()
-                .body("$", hasKey("msisdn"))
-                .body("$", hasKey("tariffId"));
+                .when().patch(base_url+"/clients/"+msisdn+"/tariffID");
+        Assertions.assertEquals(200, response.statusCode());
+        System.out.println(response.asPrettyString());
+    }
+
+    @Test
+    public void FailTestPatchTariffID1() throws JSONException {
+        String authorization = encode("admin", "admin");
+        JSONObject requestParams = new JSONObject();
+        requestParams.put("msisdn", msisdn);
+        requestParams.put("tariffId", -666);
+
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
+                .body(requestParams.toString())
+                .contentType("application/json")
+                .when().patch(base_url+"/clients/"+msisdn+"/tariffID");
+        Assertions.assertEquals(400, response.statusCode());
+        System.out.println(response.asPrettyString());
+    }
+
+    @Test
+    public void FailTestPatchTariffID2() throws JSONException {
+        String authorization = encode("admin", "admin");
+        JSONObject requestParams = new JSONObject();
+        requestParams.put("msisdn", 8888);
+        requestParams.put("tariffId", "-1");
+
+        Response response = given().when()
+                .header("authorization", "Basic " + authorization)
+                .body(requestParams.toString())
+                .contentType("application/json")
+                .when().patch(base_url+"/clients/"+msisdn+"/tariffID");
+        Assertions.assertEquals(403, response.statusCode());
+        System.out.println(response.asPrettyString());
     }
 
 }
